@@ -1,5 +1,4 @@
 #include "TMCStepper.h"
-#include "Tone.h"
 
 #define EN_PIN           2 // Enable
 #define DIR_PIN          3 // Direction
@@ -24,9 +23,7 @@ float y = 0;
 bool dir_sign = LOW;
 
 //init object driver
-TMC2209Stepper driver(&SERIAL_PORT, R_SENSE, DRIVER_ADDRESS);
-
-Tone driver_pwm;
+TMC2209Stepper driver(&SERIAL_PORT_TMC, R_SENSE, DRIVER_ADDRESS);
 
 void setup() {
   
@@ -39,7 +36,7 @@ void setup() {
   pinMode (JoyStick_Y, INPUT);
 
   SERIAL_PORT_TMC.begin(BAUD_RATE);  // HW UART drivers
-  driver.beginSerial(BAUD_RATE);     // SW UART drivers
+//  driver.beginSerial(BAUD_RATE);     // SW UART drivers
 
   driver.toff(5);                 // Enables driver in software
   driver.rms_current(600);        // Set motor RMS current
@@ -49,12 +46,13 @@ void setup() {
 //driver.en_spreadCycle(false);   // Toggle spreadCycle on TMC2208/2209/2224
   driver.pwm_autoscale(true);     // Needed for stealthChop
 
-  driver_pwm.begin(STEP_PIN);
-
   digitalWrite(DIR_PIN, dir_sign);  
   digitalWrite(EN_PIN, LOW);      // Enable driver in hardware
   
 }
+
+
+float time = millis();
 
 void loop() {
 
@@ -64,18 +62,19 @@ void loop() {
     if ( y < 0)
     dir_sign = HIGH; 
     else
-    dir_sign = LOW
+    dir_sign = LOW;
 
     y *=y;
 
     if(y>LOW_SPEED_THLD){
       freq = y * FREQ_MAX;
-      driver_pwm.play(freq); 
     }
     else{
       freq = 0;
-      driver_pwm.stop();    
     }
+
+    analogWriteFrequency(STEP_PIN, freq);
+    analogWrite(STEP_PIN, 128);
     
     time = millis();
   }
