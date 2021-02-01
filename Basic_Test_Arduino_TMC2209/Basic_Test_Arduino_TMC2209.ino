@@ -24,7 +24,7 @@ float y = 0;
 bool dir_sign = LOW;
 
 //init object driver
-TMC2209Stepper driver(&SERIAL_PORT, R_SENSE, DRIVER_ADDRESS);
+TMC2209Stepper driver(&SERIAL_PORT_TMC, R_SENSE, DRIVER_ADDRESS);
 
 Tone driver_pwm;
 
@@ -39,7 +39,7 @@ void setup() {
   pinMode (JoyStick_Y, INPUT);
 
   SERIAL_PORT_TMC.begin(BAUD_RATE);  // HW UART drivers
-  driver.beginSerial(BAUD_RATE);     // SW UART drivers
+//  driver.beginSerial(BAUD_RATE);     // SW UART drivers
 
   driver.toff(5);                 // Enables driver in software
   driver.rms_current(600);        // Set motor RMS current
@@ -56,6 +56,8 @@ void setup() {
   
 }
 
+float time = millis();
+
 void loop() {
 
   if (millis() - time > DELTATIME) {  
@@ -64,7 +66,7 @@ void loop() {
     if ( y < 0)
     dir_sign = HIGH; 
     else
-    dir_sign = LOW
+    dir_sign = LOW;
 
     y *=y;
 
