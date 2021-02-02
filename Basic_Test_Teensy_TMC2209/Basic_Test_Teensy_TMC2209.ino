@@ -51,7 +51,6 @@ void setup() {
   
 }
 
-
 float time = millis();
 
 void loop() {
@@ -73,6 +72,7 @@ void loop() {
       freq = 0;
     }
 
+    digitalWrite(DIR_PIN, dir_sign);
     analogWriteFrequency(STEP_PIN, freq);
     analogWrite(STEP_PIN, 128);
     
