@@ -72,6 +72,7 @@ void loop() {
 
     if(y>LOW_SPEED_THLD){
       freq = y * FREQ_MAX;
+      digitalWrite(DIR_PIN, dir_sign);
       driver_pwm.play(freq); 
     }
     else{

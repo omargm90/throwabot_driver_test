@@ -92,7 +92,7 @@ void loop() {
     }
 // update speed 
 
-      y = (analogRead(JoyStick_X) - 511.5 ) / 511.5;
+      y = (analogRead(JoyStick_X) - 511.5 ) / 511.5; //change midpoint according to initial measurement
 
       if ( y < 0)
         dir_sign = HIGH; 

@@ -1,10 +1,11 @@
 #include "TMCStepper.h"
 
-#define EN_PIN           2 // Enable
 #define DIR_PIN          3 // Direction
-#define STEP_PIN         10 // Step
+#define STEP_PIN         4 // Step
 
-#define SERIAL_PORT_TMC Serial // 
+#define EN_PIN           10 // Enable
+
+#define SERIAL_PORT_TMC Serial2 // 
 #define BAUD_RATE 57600
 #define DRIVER_ADDRESS 0b00 // TMC2209 Driver address according to MS1 and MS2
 
@@ -21,6 +22,8 @@ float freq = 0;
 float x = 0;
 float y = 0;
 bool dir_sign = LOW;
+float Jx_reading = 0;
+float Jx_0  = 540;
 
 //init object driver
 TMC2209Stepper driver(&SERIAL_PORT_TMC, R_SENSE, DRIVER_ADDRESS);
@@ -28,13 +31,15 @@ TMC2209Stepper driver(&SERIAL_PORT_TMC, R_SENSE, DRIVER_ADDRESS);
 void setup() {
   
   //initialize 
+  Serial.begin(9600);
+  while(!Serial){ };
   pinMode(EN_PIN, OUTPUT);
   pinMode(STEP_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
 
   pinMode (JoyStick_X, INPUT);
   pinMode (JoyStick_Y, INPUT);
-
+  
   SERIAL_PORT_TMC.begin(BAUD_RATE);  // HW UART drivers
 //  driver.beginSerial(BAUD_RATE);     // SW UART drivers
 
@@ -53,10 +58,18 @@ void setup() {
 
 float time = millis();
 
+
+
 void loop() {
 
   if (millis() - time > DELTATIME) {  
-    y = (analogRead(JoyStick_X) - 511.5 ) / 511.5;
+
+    Jx_reading = analogRead(JoyStick_X);
+//    Serial.println(Jx_reading);
+    
+    y = (Jx_reading - Jx_0 ) / Jx_0;
+
+    Serial.println(y);
 
     if ( y < 0)
     dir_sign = HIGH; 
@@ -67,15 +80,17 @@ void loop() {
 
     if(y>LOW_SPEED_THLD){
       freq = y * FREQ_MAX;
+      digitalWrite(EN_PIN, LOW);      // Enable driver in hardware
     }
     else{
       freq = 0;
+      digitalWrite(EN_PIN, HIGH);      // Enable driver in hardware
     }
 
     digitalWrite(DIR_PIN, dir_sign);
     analogWriteFrequency(STEP_PIN, freq);
     analogWrite(STEP_PIN, 128);
-    
+//    
     time = millis();
   }
 
