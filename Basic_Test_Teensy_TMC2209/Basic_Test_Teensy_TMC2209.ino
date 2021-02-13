@@ -1,97 +1,76 @@
-#include "TMCStepper.h"
+/**
+ * Author Teemu Mäntykallio
+ * Initializes the library and runs the stepper
+ * motor in alternating directions.
+ */
 
-#define DIR_PIN          3 // Direction
-#define STEP_PIN         4 // Step
+#include <TMCStepper.h>
 
 #define EN_PIN           10 // Enable
+#define DIR_PIN          3 // Direction
+#define STEP_PIN         4 // Step
+#define MS2_PIN         6
+#define MS1_PIN         9
 
-#define SERIAL_PORT_TMC Serial2 // 
-#define BAUD_RATE 57600
+#define SERIAL_PORT Serial3 // TMC2208/TMC2224 HardwareSerial port
 #define DRIVER_ADDRESS 0b00 // TMC2209 Driver address according to MS1 and MS2
 
-#define R_SENSE 0.11f // SilentStepStick series use 0.11
+#define R_SENSE 0.11f // Match to your driver
+                      // SilentStepStick series use 0.11
+                      // UltiMachine Einsy and Archim2 boards use 0.2
+                      // Panucatt BSD2660 uses 0.1
+                      // Watterott TMC5160 uses 0.075
 
-#define FREQ_MAX 5000
-#define LOW_SPEED_THLD 0.015
-#define DELTATIME 10
+// Select your stepper driver type
+//TMC2130Stepper driver(CS_PIN, R_SENSE);                           // Hardware SPI
+//TMC2130Stepper driver(CS_PIN, R_SENSE, SW_MOSI, SW_MISO, SW_SCK); // Software SPI
+//TMC2660Stepper driver(CS_PIN, R_SENSE);                           // Hardware SPI
+//TMC2660Stepper driver(CS_PIN, R_SENSE, SW_MOSI, SW_MISO, SW_SCK);
+//TMC5160Stepper driver(CS_PIN, R_SENSE);
+//TMC5160Stepper driver(CS_PIN, R_SENSE, SW_MOSI, SW_MISO, SW_SCK);
 
-#define JoyStick_X A0 // X-axis-signal
-#define JoyStick_Y A1 // Y-axis-signal
-
-float freq = 0;
-float x = 0;
-float y = 0;
-bool dir_sign = LOW;
-float Jx_reading = 0;
-float Jx_0  = 540;
-
-//init object driver
-TMC2209Stepper driver(&SERIAL_PORT_TMC, R_SENSE, DRIVER_ADDRESS);
+//TMC2208Stepper driver(&SERIAL_PORT, R_SENSE);                     // Hardware Serial
+//TMC2208Stepper driver(SW_RX, SW_TX, R_SENSE);                     // Software serial
+TMC2209Stepper driver(&SERIAL_PORT, R_SENSE, DRIVER_ADDRESS);
+//TMC2209Stepper driver(SW_RX, SW_TX, R_SENSE, DRIVER_ADDRESS);
 
 void setup() {
-  
-  //initialize 
-  Serial.begin(9600);
-  while(!Serial){ };
   pinMode(EN_PIN, OUTPUT);
   pinMode(STEP_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
-
-  pinMode (JoyStick_X, INPUT);
-  pinMode (JoyStick_Y, INPUT);
+  pinMode(MS2_PIN, OUTPUT);
+  pinMode(MS1_PIN, OUTPUT);
   
-  SERIAL_PORT_TMC.begin(BAUD_RATE);  // HW UART drivers
-//  driver.beginSerial(BAUD_RATE);     // SW UART drivers
+  digitalWrite(EN_PIN, LOW);      // Enable driver in hardware
+  digitalWrite(MS2_PIN, LOW);     
+  digitalWrite(MS1_PIN, LOW);     
+                                  // Enable one according to your setup
+//SPI.begin();                    // SPI drivers
+SERIAL_PORT.begin(115200);      // HW UART drivers
+//driver.beginSerial(115200);     // SW UART drivers
 
+  driver.begin();                 //  SPI: Init CS pins and possible SW SPI pins
+                                  // UART: Init SW UART (if selected) with default 115200 baudrate
   driver.toff(5);                 // Enables driver in software
   driver.rms_current(600);        // Set motor RMS current
-  driver.microsteps(16);          // Set microsteps to 1/16th
+  driver.microsteps(128);          // Set microsteps to 1/16th
 
 //driver.en_pwm_mode(true);       // Toggle stealthChop on TMC2130/2160/5130/5160
 //driver.en_spreadCycle(false);   // Toggle spreadCycle on TMC2208/2209/2224
   driver.pwm_autoscale(true);     // Needed for stealthChop
-
-  digitalWrite(DIR_PIN, dir_sign);  
-  digitalWrite(EN_PIN, LOW);      // Enable driver in hardware
-  
 }
 
-float time = millis();
-
-
+bool shaft = false;
 
 void loop() {
-
-  if (millis() - time > DELTATIME) {  
-
-    Jx_reading = analogRead(JoyStick_X);
-//    Serial.println(Jx_reading);
-    
-    y = (Jx_reading - Jx_0 ) / Jx_0;
-
-    Serial.println(y);
-
-    if ( y < 0)
-    dir_sign = HIGH; 
-    else
-    dir_sign = LOW;
-
-    y *=y;
-
-    if(y>LOW_SPEED_THLD){
-      freq = y * FREQ_MAX;
-      digitalWrite(EN_PIN, LOW);      // Enable driver in hardware
-    }
-    else{
-      freq = 0;
-      digitalWrite(EN_PIN, HIGH);      // Enable driver in hardware
-    }
-
-    digitalWrite(DIR_PIN, dir_sign);
-    analogWriteFrequency(STEP_PIN, freq);
-    analogWrite(STEP_PIN, 128);
-//    
-    time = millis();
+  // Run 5000 steps and switch direction in software
+  for (uint16_t i = 5000; i>0; i--) {
+    digitalWrite(STEP_PIN, HIGH);
+    delayMicroseconds(160);
+    digitalWrite(STEP_PIN, LOW);
+    delayMicroseconds(160);
   }
-
+  shaft = !shaft;
+  driver.shaft(shaft);
+  
 }
